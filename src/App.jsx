@@ -11,6 +11,22 @@ const TASK_FILTERS = {
   COMPLETED: 'completed',
 }
 
+const dueDateFormatter = new Intl.DateTimeFormat(undefined, {
+  month: 'short',
+  day: 'numeric',
+  year: 'numeric',
+})
+
+const isIsoDate = (value) => /^\d{4}-\d{2}-\d{2}$/.test(value)
+
+const getTodayDateString = () => {
+  const today = new Date()
+  const year = today.getFullYear()
+  const month = String(today.getMonth() + 1).padStart(2, '0')
+  const day = String(today.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
 const getStoredTasks = () => {
   try {
     const rawTasks = localStorage.getItem(STORAGE_KEY)
@@ -20,13 +36,20 @@ const getStoredTasks = () => {
       return []
     }
 
-    return parsedTasks.filter(
-      (task) =>
-        task &&
-        typeof task.id === 'string' &&
-        typeof task.text === 'string' &&
-        typeof task.done === 'boolean',
-    )
+    return parsedTasks
+      .filter(
+        (task) =>
+          task &&
+          typeof task.id === 'string' &&
+          typeof task.text === 'string' &&
+          typeof task.done === 'boolean' &&
+          (task.dueDate == null ||
+            (typeof task.dueDate === 'string' && isIsoDate(task.dueDate))),
+      )
+      .map((task) => ({
+        ...task,
+        dueDate: typeof task.dueDate === 'string' ? task.dueDate : null,
+      }))
   } catch {
     return []
   }
@@ -35,6 +58,7 @@ const getStoredTasks = () => {
 function App() {
   const [count, setCount] = useState(0)
   const [taskInput, setTaskInput] = useState('')
+  const [dueDateInput, setDueDateInput] = useState('')
   const [tasks, setTasks] = useState(() => getStoredTasks())
   const [taskFilter, setTaskFilter] = useState(TASK_FILTERS.ALL)
 
@@ -54,11 +78,13 @@ function App() {
       {
         id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
         text: trimmedInput,
+        dueDate: dueDateInput || null,
         done: false,
       },
       ...prevTasks,
     ])
     setTaskInput('')
+    setDueDateInput('')
   }
 
   const toggleTask = (taskId) => {
@@ -75,6 +101,17 @@ function App() {
 
   const clearCompleted = () => {
     setTasks((prevTasks) => prevTasks.filter((task) => !task.done))
+  }
+
+  const isTaskOverdue = (task) =>
+    Boolean(task.dueDate) && !task.done && task.dueDate < getTodayDateString()
+
+  const formatDueDate = (dueDate) => {
+    if (!dueDate) {
+      return ''
+    }
+
+    return dueDateFormatter.format(new Date(`${dueDate}T00:00:00`))
   }
 
   const completedTasks = tasks.filter((task) => task.done).length
@@ -131,6 +168,16 @@ function App() {
             placeholder="Add a small task"
             onChange={(event) => setTaskInput(event.target.value)}
           />
+          <label className="sr-only" htmlFor="task-due-date">
+            Due date
+          </label>
+          <input
+            id="task-due-date"
+            className="task-date-input"
+            type="date"
+            value={dueDateInput}
+            onChange={(event) => setDueDateInput(event.target.value)}
+          />
           <button className="task-action" type="submit">
             Add
           </button>
@@ -183,15 +230,29 @@ function App() {
         ) : (
           <ul className="task-list">
             {filteredTasks.map((task) => (
-              <li key={task.id} className="task-item">
+              <li
+                key={task.id}
+                className={isTaskOverdue(task) ? 'task-item task-item-overdue' : 'task-item'}
+              >
                 <label className="task-check">
                   <input
                     type="checkbox"
                     checked={task.done}
                     onChange={() => toggleTask(task.id)}
                   />
-                  <span className={task.done ? 'task-text task-text-done' : 'task-text'}>
-                    {task.text}
+                  <span className="task-content">
+                    <span className={task.done ? 'task-text task-text-done' : 'task-text'}>
+                      {task.text}
+                    </span>
+                    {task.dueDate && (
+                      <span
+                        className={
+                          isTaskOverdue(task) ? 'task-due task-due-overdue' : 'task-due'
+                        }
+                      >
+                        Due {formatDueDate(task.dueDate)}
+                      </span>
+                    )}
                   </span>
                 </label>
                 <button
