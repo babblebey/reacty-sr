@@ -1,0 +1,102 @@
+name: Release Dry Run PR
+
+on:
+  pull_request:
+    types:
+      - opened
+      - reopened
+      - synchronize
+      - ready_for_review
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  release-dry-run:
+    if: github.event.pull_request.draft == false
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout merge commit
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 0
+          ref: refs/pull/${{ github.event.pull_request.number }}/merge
+
+      - name: Set local branch to PR base name
+        run: |
+          git checkout -B "${{ github.event.pull_request.base.ref }}"
+
+      - name: Setup Node
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          cache: npm
+          node-version: lts/*
+
+      - name: Install dependencies
+        run: npm clean-install
+
+      - name: Dry run semantic-release
+        id: dry_run
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -o pipefail
+          output_file="$(mktemp)"
+
+          npx semantic-release-react@1.0.0-beta.1 \
+            --dry-run \
+            --no-ci \
+            --branches "${{ github.event.pull_request.base.ref }}" \
+            2>&1 | tee "$output_file" || true
+
+          next_version="$(grep -oE 'next release version is [^[:space:]]+' "$output_file" | tail -n 1 | awk '{print $NF}')"
+
+          if [ -z "$next_version" ]; then
+            next_version="none"
+          fi
+
+          echo "next_version=$next_version" >> "$GITHUB_OUTPUT"
+
+      - name: Comment predicted version
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v8.0.0
+        env:
+          NEXT_VERSION: ${{ steps.dry_run.outputs.next_version }}
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const marker = '<!-- semantic-release-dry-run -->';
+            const nextVersion = process.env.NEXT_VERSION;
+            const issue_number = context.issue.number;
+
+            const body = nextVersion && nextVersion !== 'none'
+              ? `${marker}\n### Semantic Release Dry Run\nNext possible version from this PR: **${nextVersion}**`
+              : `${marker}\n### Semantic Release Dry Run\nNo next version was detected for this PR with the current commit messages.`;
+
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number,
+            });
+
+            const existing = comments.find((comment) =>
+              comment.user?.type === 'Bot' && comment.body?.includes(marker)
+            );
+
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existing.id,
+                body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number,
+                body,
+              });
+            }
