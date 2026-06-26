@@ -5,6 +5,11 @@ import heroImg from './assets/hero.png'
 import './App.css'
 
 const STORAGE_KEY = 'reacty-sr-quick-tasks'
+const TASK_FILTERS = {
+  ALL: 'all',
+  ACTIVE: 'active',
+  COMPLETED: 'completed',
+}
 
 const getStoredTasks = () => {
   try {
@@ -31,6 +36,7 @@ function App() {
   const [count, setCount] = useState(0)
   const [taskInput, setTaskInput] = useState('')
   const [tasks, setTasks] = useState(() => getStoredTasks())
+  const [taskFilter, setTaskFilter] = useState(TASK_FILTERS.ALL)
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks))
@@ -72,6 +78,17 @@ function App() {
   }
 
   const completedTasks = tasks.filter((task) => task.done).length
+  const filteredTasks = tasks.filter((task) => {
+    if (taskFilter === TASK_FILTERS.ACTIVE) {
+      return !task.done
+    }
+
+    if (taskFilter === TASK_FILTERS.COMPLETED) {
+      return task.done
+    }
+
+    return true
+  })
 
   return (
     <>
@@ -123,11 +140,49 @@ function App() {
           {completedTasks}/{tasks.length} completed
         </p>
 
+        <div className="task-filters" role="group" aria-label="Filter tasks">
+          <button
+            type="button"
+            className={
+              taskFilter === TASK_FILTERS.ALL
+                ? 'task-filter task-filter-active'
+                : 'task-filter'
+            }
+            onClick={() => setTaskFilter(TASK_FILTERS.ALL)}
+          >
+            All
+          </button>
+          <button
+            type="button"
+            className={
+              taskFilter === TASK_FILTERS.ACTIVE
+                ? 'task-filter task-filter-active'
+                : 'task-filter'
+            }
+            onClick={() => setTaskFilter(TASK_FILTERS.ACTIVE)}
+          >
+            Active
+          </button>
+          <button
+            type="button"
+            className={
+              taskFilter === TASK_FILTERS.COMPLETED
+                ? 'task-filter task-filter-active'
+                : 'task-filter'
+            }
+            onClick={() => setTaskFilter(TASK_FILTERS.COMPLETED)}
+          >
+            Completed
+          </button>
+        </div>
+
         {tasks.length === 0 ? (
           <p className="task-empty">No tasks yet. Add your first one.</p>
+        ) : filteredTasks.length === 0 ? (
+          <p className="task-empty">No tasks in this filter.</p>
         ) : (
           <ul className="task-list">
-            {tasks.map((task) => (
+            {filteredTasks.map((task) => (
               <li key={task.id} className="task-item">
                 <label className="task-check">
                   <input

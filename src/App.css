@@ -145,6 +145,45 @@
   margin-bottom: 12px;
 }
 
+.task-filters {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+
+  @media (max-width: 1024px) {
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+}
+
+.task-filter {
+  min-height: 32px;
+  padding: 0 10px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-h);
+  font-family: var(--mono);
+  cursor: pointer;
+  transition:
+    border-color 0.3s,
+    background-color 0.3s;
+
+  &:hover {
+    border-color: var(--accent-border);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 1px;
+  }
+}
+
+.task-filter-active {
+  background: var(--accent-bg);
+  border-color: var(--accent-border);
+}
+
 .task-empty {
   padding: 14px;
   border: 1px dashed var(--border);
