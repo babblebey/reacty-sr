@@ -117,6 +117,21 @@
   }
 }
 
+.task-date-input {
+  min-height: 40px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0 10px;
+  font: inherit;
+  color: var(--text-h);
+  background: var(--bg);
+
+  &:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 1px;
+  }
+}
+
 .task-action,
 .task-remove,
 .task-clear {
@@ -217,8 +232,15 @@
 
 .task-check {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 10px;
+}
+
+.task-content {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
 }
 
 .task-text {
@@ -229,6 +251,20 @@
 .task-text-done {
   text-decoration: line-through;
   opacity: 0.65;
+}
+
+.task-due {
+  font-size: 13px;
+  opacity: 0.85;
+}
+
+.task-due-overdue {
+  color: #b3261e;
+  font-weight: 600;
+}
+
+.task-item-overdue {
+  border-color: rgba(179, 38, 30, 0.35);
 }
 
 .task-remove {
