@@ -46,7 +46,7 @@ jobs:
           set -o pipefail
           output_file="$(mktemp)"
 
-          npx semantic-release-react@1.0.0-beta.1 \
+          npx semantic-release-react@1.0.0-beta.3 \
             --dry-run \
             --no-ci \
             --branches "${{ github.event.pull_request.base.ref }}" \
